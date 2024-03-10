@@ -7,6 +7,9 @@ import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.ai.client.generativeai.GenerativeModel
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -15,7 +18,7 @@ import org.json.JSONObject
 import java.io.IOException
 
 class MainActivity : AppCompatActivity() {
-    private val apiKey = "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"
+    private val apiKey = "AIzaSyBdgdoCLwTK2lmcmBjAU5EG71giugHfFNk"
     private lateinit var binding: ActivityMainBinding
     private val messageList = mutableListOf<Message>()
     private val messageAdapter = MessageAdapter(messageList)
@@ -80,55 +83,18 @@ class MainActivity : AppCompatActivity() {
         binding.recyclerView.scrollToPosition(messageList.size - 1)
     }
 
-
-
-
-
-    private fun callAPI(question: String) {
-        val jsonBody = JSONObject()
-        try {
-            jsonBody.put("Model", "text-davinci-003") // Updated model name
-            jsonBody.put("prompt", question)
-            jsonBody.put("max_tokens", 4000)
-            jsonBody.put("temperature", 0)
-        } catch (e: JSONException) {
-            e.printStackTrace()
+    private fun callAPI(question:String){
+        val generativeModel = GenerativeModel(
+            // For text-only input, use the gemini-pro model
+            modelName = "gemini-pro",
+            // Access your API key as a Build Configuration variable (see "Set up your API key" above)
+            apiKey = apiKey
+        )
+        runBlocking {
+            launch{
+                addResponse(generativeModel.generateContent(question).text)
+            }
         }
 
-        val requestBody = jsonBody.toString().toRequestBody("application/json; charset=utf-8".toMediaType())
-        val request = Request.Builder()
-            .url("https://api.openai.com/v1/chat/completions")
-            .header("Authorization", "Bearer $apiKey")
-            .post(requestBody)
-            .build()
-
-        client.newCall(request).enqueue(object : Callback {
-            override fun onFailure(call: Call, e: IOException) {
-                addResponse("Failed to load response due to ${e.message}")
-            }
-
-            override fun onResponse(call: Call, response: Response) {
-                response.use { resp ->
-                    if (resp.isSuccessful) {
-                        val responseBody = resp.body?.string() ?: ""
-                        val result = JSONObject(responseBody).getJSONArray("choices").getJSONObject(0).getString("text")
-                        // Run on the UI thread to update UI components.
-                        runOnUiThread {
-                            addResponse(result.trim { it <= ' ' })
-                        }
-                    } else {
-                        // Run on the UI thread to update UI components.
-                        runOnUiThread {
-                            addResponse("Failed to load response.")
-                        }
-                    }
-                }
-            }
-
-        })
-    }
-
-    companion object {
-        val JSON: MediaType = "application/json; charset=utf-8".toMediaType()
-    }
+}
 }
