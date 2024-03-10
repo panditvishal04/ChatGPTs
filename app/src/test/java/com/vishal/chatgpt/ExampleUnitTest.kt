@@ -1,4 +1,4 @@
-package com.malkinfo.chatgpts
+package com.vishal.chatgpt
 
 import org.junit.Test
 
